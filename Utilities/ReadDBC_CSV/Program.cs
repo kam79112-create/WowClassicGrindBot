@@ -30,8 +30,10 @@ internal sealed class Program
         { ClientVersion.Wrath, "3.4.5.63697" },     // WotLK Classic
         { ClientVersion.Cata, "4.4.2.60895" },      // Cataclysm Classic
         { ClientVersion.Mop, "5.5.4.68806" },       // MoP Classic
-        // WoW: Forever. Build measured in-client; wago.tools availability NOT checked.
-        { ClientVersion.Forever, "1.60.1.70959" },
+        // WoW: Forever. Client build 15400 ("Debug: 1.60.1.15400 (core 172)" on
+        // screen). 70959 is the CDN summary build, NOT the client build - do not
+        // use it here. wago.tools availability for 15400 NOT checked.
+        { ClientVersion.Forever, "1.60.1.15400" },
 
         // Legacy Cata (4.3.4). 8.1.0 is BfA, NOT a typo and NOT "the closest
         // re-release" - it is chosen for UiMap COVERAGE. The addon bridges a legacy

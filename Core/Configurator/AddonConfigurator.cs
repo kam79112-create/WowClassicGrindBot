@@ -4,6 +4,8 @@ using Game;
 
 using Microsoft.Extensions.Logging;
 
+using SharedLib;
+
 using System;
 using System.IO;
 using System.Linq;
@@ -19,6 +21,16 @@ public sealed partial class AddonConfigurator
     public AddonConfig Config { get; init; }
 
     private const string DefaultAddonName = "DataToColor";
+
+    /// <summary>
+    /// WoW: Forever only auto-loads the known TOC suffixes (_Mainline, _Classic,
+    /// _Vanilla, _TBC, _Wrath, _Cata, _Mists), so "_Forever" is ignored and the
+    /// client reads the plain DataToColor.toc. That plain file in the repo is the
+    /// legacy 4.3.4 / 5.4.8 TOC and must stay that way, so the Forever TOC is
+    /// swapped in at install time instead. See PORT_NOTES.md.
+    /// </summary>
+    public const string ForeverTocFileName = DefaultAddonName + "_Forever.toc";
+    public const string PlainTocFileName = DefaultAddonName + ".toc";
     private const string AddonSourcePath = @".\Addons\";
 
     private string AddonBasePath => Path.Join(process.Path, "Interface", "AddOns");
@@ -99,6 +111,7 @@ public sealed partial class AddonConfigurator
         {
             DeleteAddon();
             CopyAddonFiles();
+            ApplyClientToc();
             RenameAddon();
             MakeUnique();
 
@@ -145,6 +158,24 @@ public sealed partial class AddonConfigurator
     private void CopyFolder(string parentFolder)
     {
         DirectoryCopy(Path.Join(parentFolder + AddonSourcePath), AddonBasePath, true);
+    }
+
+    private void ApplyClientToc()
+    {
+        if (new StartupClientVersion(process.FileVersion).Version != ClientVersion.Forever)
+            return;
+
+        string forever = Path.Join(DefaultAddonPath, ForeverTocFileName);
+        string plain = Path.Join(DefaultAddonPath, PlainTocFileName);
+        if (!File.Exists(forever))
+        {
+            logger.LogError("ApplyClientToc - missing {File}", forever);
+            return;
+        }
+
+        File.Copy(forever, plain, overwrite: true);
+        logger.LogInformation("ApplyClientToc - WoW: Forever -> {Toc} from {Source}",
+            PlainTocFileName, ForeverTocFileName);
     }
 
     private void RenameAddon()

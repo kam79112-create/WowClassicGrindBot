@@ -16,9 +16,10 @@
     "SPELL_FROSTBOLT": 7322,
     "SPELL_FROST_NOVA": 122,
     "SPELL_FIRE_BLAST": 2138,
-    "SPELL_FROST_ARMOR": 7301,
+    "SPELL_ICE_ARMOR": 7301,
     "SPELL_CONJURE_WATER": 5506,
-    "SPELL_CONJURE_FOOD": 990
+    "SPELL_CONJURE_FOOD": 990,
+    "SPELL_SHOOT": 5019
   },
   "Pull": {
     "Sequence": [
@@ -27,7 +28,11 @@
         "Key": "1",
         "BeforeCastStop": true,
         "AfterCastWaitCastbar": true,
-        "Requirements": ["Spell:SPELL_FROSTBOLT", "MaxRange > 25", "Mana% > 15"]
+        "Requirements": [
+          "Spell:SPELL_FROSTBOLT",
+          "MaxRange > 25",
+          "Mana% > 15"
+        ]
       }
     ]
   },
@@ -37,20 +42,32 @@
         "Name": "Frost Nova",
         "Key": "2",
         "WhenUsable": true,
-        "Requirements": ["Spell:SPELL_FROST_NOVA", "InMeleeRange"],
+        "Requirements": [
+          "Spell:SPELL_FROST_NOVA",
+          "InMeleeRange"
+        ],
         "AfterCastStepBack": 1000
       },
       {
         "Name": "Fire Blast",
         "Key": "3",
         "WhenUsable": true,
-        "Requirements": ["Spell:SPELL_FIRE_BLAST", "TargetHealth% < 22", "SpellInRange:4"]
+        "Requirements": [
+          "Spell:SPELL_FIRE_BLAST",
+          "TargetHealth% < 22",
+          "SpellInRange:4"
+        ]
       },
       {
         "Name": "Shoot",
         "Key": "6",
         "Item": true,
-        "Requirements": ["HasRangedWeapon", "!Shooting", "Mana% < 8"]
+        "Requirements": [
+          "Spell:SPELL_SHOOT",
+          "HasRangedWeapon",
+          "!Shooting",
+          "Mana% < 8"
+        ]
       },
       {
         "Name": "Frostbolt",
@@ -58,48 +75,83 @@
         "BeforeCastStop": true,
         "AfterCastWaitCastbar": true,
         "WhenUsable": true,
-        "Requirements": ["Spell:SPELL_FROSTBOLT", "Mana% >= 8"]
+        "Requirements": [
+          "Spell:SPELL_FROSTBOLT",
+          "Mana% >= 8"
+        ]
       },
       {
         "Name": "AutoAttack",
-        "Requirements": ["!HasRangedWeapon", "!AutoAttacking"]
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!AutoAttacking"
+        ]
       }
     ]
   },
   "Adhoc": {
     "Sequence": [
       {
-        "Name": "Frost Armor",
+        "Name": "Ice Armor",
         "Key": "N2",
-        "Requirements": ["Spell:SPELL_FROST_ARMOR", "!Frost Armor"],
+        "Requirements": [
+          "Spell:SPELL_ICE_ARMOR",
+          "!Ice Armor"
+        ],
         "AfterCastWaitBuff": true
       },
       {
         "Name": "Conjure Water",
         "Key": "N0",
         "HasCastBar": true,
-        "Requirements": ["Spell:SPELL_CONJURE_WATER", "DrinkCount < 5", "!Casting"],
+        "Requirements": [
+          "Spell:SPELL_CONJURE_WATER",
+          "DrinkCount < 5",
+          "!Casting"
+        ],
         "AfterCastWaitBag": true
       },
       {
         "Name": "Conjure Food",
         "Key": "N9",
         "HasCastBar": true,
-        "Requirements": ["Spell:SPELL_CONJURE_FOOD", "FoodCount < 5", "!Casting"],
+        "Requirements": [
+          "Spell:SPELL_CONJURE_FOOD",
+          "FoodCount < 5",
+          "!Casting"
+        ],
         "AfterCastWaitBag": true
       }
     ]
   },
   "Parallel": {
     "Sequence": [
-      { "Name": "Drink", "Key": "4", "Requirement": "Mana% < 55" },
-      { "Name": "Food", "Key": "5", "Requirement": "Health% < 60" }
+      {
+        "Name": "Drink",
+        "Key": "4",
+        "Requirement": "Mana% < 55"
+      },
+      {
+        "Name": "Food",
+        "Key": "5",
+        "Requirement": "Health% < 60"
+      }
     ]
   },
   "Flee": {
     "Sequence": [
-      { "Name": "Flee", "Requirement": "MobCount > 1 && Health% < 45" },
-      { "Name": "Frost Nova", "Key": "2", "Requirements": ["Spell:SPELL_FROST_NOVA", "InMeleeRange"] }
+      {
+        "Name": "Flee",
+        "Requirement": "MobCount > 1 && Health% < 45"
+      },
+      {
+        "Name": "Frost Nova",
+        "Key": "2",
+        "Requirements": [
+          "Spell:SPELL_FROST_NOVA",
+          "InMeleeRange"
+        ]
+      }
     ]
   }
 }

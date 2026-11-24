@@ -10,6 +10,24 @@ local UnitChannelInfo = UnitChannelInfo
 local UnitCastingInfo = UnitCastingInfo
 local GetSpellInfo = GetSpellInfo
 
+-- GetSpellInfo moved to C_Spell on modern clients (WoW: Forever 1.60.1 has no
+-- global). Rebuild the classic SHORT tuple from the table form so every caller,
+-- including the load-time layout probe below, keeps working:
+--   name, rank, icon, castTime, minRange, maxRange, spellID, originalIcon
+-- Feature-detected: a client that still has the global keeps its own.
+if not GetSpellInfo and C_Spell and C_Spell.GetSpellInfo then
+  local C_Spell_GetSpellInfo = C_Spell.GetSpellInfo
+  GetSpellInfo = function(spell)
+    if spell == nil then return nil end
+    local info = C_Spell_GetSpellInfo(spell)
+    if not info then return nil end
+    return info.name, nil, info.iconID, info.castTime, info.minRange,
+      info.maxRange, info.spellID, info.originalIconID
+  end
+end
+-- Other files bind this instead of the (possibly nil) global.
+DataToColor.GetSpellInfo = GetSpellInfo
+
 local WOW_PROJECT_ID = WOW_PROJECT_ID or -1 -- -1 = Legacy client (old retail)
 local WOW_PROJECT_CLASSIC = WOW_PROJECT_CLASSIC
 local WOW_PROJECT_BURNING_CRUSADE_CLASSIC = WOW_PROJECT_BURNING_CRUSADE_CLASSIC
@@ -17,7 +35,28 @@ local WOW_PROJECT_WRATH_CLASSIC = WOW_PROJECT_WRATH_CLASSIC
 local WOW_PROJECT_CATACLYSM_CLASSIC = WOW_PROJECT_CATACLYSM_CLASSIC
 local WOW_PROJECT_MAINLINE = WOW_PROJECT_MAINLINE
 
-local buildVersion = select(4, GetBuildInfo())
+-- WoW: Forever. WOW_PROJECT_ID measured as 18 in-client; the client defines no
+-- WOW_PROJECT_* constant for it, hence the literal.
+local WOW_PROJECT_FOREVER = 18
+-- 1.60.1 -> 1*10000 + 60*100 + 1
+local FOREVER_TOC_VERSION = 16001
+
+-- buildVersion (TOC number) must never be nil: it is compared numerically below
+-- and in IsVanilla(). Classic/legacy clients return it as the 4th value; WoW:
+-- Forever returns only the version string ("1.60.1"). Order: 4th value ->
+-- parsed from the version string -> assume Forever.
+local function ParseTocVersion(versionString)
+  if type(versionString) ~= "string" then return nil end
+  local major, minor, patch = string.match(versionString, "^(%d+)%.(%d+)%.(%d+)")
+  if not major then return nil end
+  return tonumber(major) * 10000 + tonumber(minor) * 100 + tonumber(patch)
+end
+
+local versionString, _, _, tocVersion = GetBuildInfo()
+local buildVersion = tonumber(tocVersion)
+  or ParseTocVersion(versionString)
+  or FOREVER_TOC_VERSION
+DataToColor.BuildVersion = buildVersion
 local isVanilla = buildVersion < 20000
 
 -- Is this a Legacy client (old retail, e.g., Cataclysm 4.3.4)?
@@ -50,9 +89,6 @@ function DataToColor.IsClassic_Cata()
   return WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
 end
 
--- WoW: Forever (1.60.1). WOW_PROJECT_ID measured as 18 in-client; the client
--- defines no WOW_PROJECT_* constant for it, hence the literal.
-local WOW_PROJECT_FOREVER = 18
 function DataToColor.IsForever()
   return WOW_PROJECT_ID == WOW_PROJECT_FOREVER
 end
@@ -890,4 +926,24 @@ function DataToColor:SafeRegisterEvent(eventName, handler)
         return true
     end
     return false
+end
+--------------------------------------------------------------------------------
+-- WoW: Forever load-time API report. Lists globals other files capture as
+-- `local X = X` that this client lacks, so a missing API shows up in chat as a
+-- fact instead of a nil-call error later. Report only - nothing is shimmed here.
+--------------------------------------------------------------------------------
+if DataToColor.IsForever() then
+  local probe = {
+    "GetSpellInfo", "GetSpellBookItemName", "GetSpellBookItemInfo", "IsSpellInRange",
+    "IsSpellKnown", "GetSpellBaseCooldown", "GetSpellCooldown", "IsUsableSpell",
+    "GetSpellTexture", "UnitBuff", "UnitDebuff", "UnitAura", "GetContainerNumSlots",
+    "GetContainerItemInfo", "GetPetHappiness", "UnitCastingInfo", "UnitChannelInfo",
+  }
+  local missing = {}
+  for i = 1, #probe do
+    if _G[probe[i]] == nil then missing[#missing + 1] = probe[i] end
+  end
+  print(string.format("DataToColor: Forever build %s (toc %d) missing globals: %s",
+    tostring(versionString), buildVersion,
+    #missing > 0 and table.concat(missing, ", ") or "none"))
 end

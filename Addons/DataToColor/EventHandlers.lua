@@ -6,7 +6,7 @@ local floor = math.floor
 
 local UIErrorsFrame = UIErrorsFrame
 local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
-local GetSpellInfo = GetSpellInfo
+local GetSpellInfo = DataToColor.GetSpellInfo
 local GetSpellCastTime = DataToColor.GetSpellCastTime
 local GetSpellBaseCooldown = GetSpellBaseCooldown
 local GetTime = GetTime

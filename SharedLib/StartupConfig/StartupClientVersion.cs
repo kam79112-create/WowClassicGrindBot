@@ -12,9 +12,15 @@ public sealed class StartupClientVersion
     {
         (Version, Path) = v switch
         {
-            // --- WoW: Forever (1.60.x) ---
+            // --- WoW: Forever (1.60.x, e.g. 1.60.1.15400) ---
             // Must precede the SoM arm: Minor 60 would otherwise match { Major: 1, Minor: >= 13 }.
             { Major: 1, Minor: 60 } => (ClientVersion.Forever, "forever"),
+
+            // Exe file version missing or unparsable (WowProcess falls back to
+            // new Version() = 0.0). Assume Forever, the only client this port
+            // targets. At runtime the addon's WOW_PROJECT_ID (18) is authoritative;
+            // this only picks the data folders before the addon is read.
+            { Major: 0 } => (ClientVersion.Forever, "forever"),
 
             // --- Classic branch ---
             { Major: 1, Minor: >= 13 } => (ClientVersion.SoM, "som"), // Vanilla / SoM

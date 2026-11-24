@@ -6,7 +6,7 @@ local UIParent = UIParent
 local C_Timer = C_Timer
 
 local GetMoney = GetMoney
-local GetSpellInfo = GetSpellInfo
+local GetSpellInfo = DataToColor.GetSpellInfo
 local GetCoinTextureString = GetCoinTextureString
 local gmatch = string.gmatch
 local tonumber = tonumber
