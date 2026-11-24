@@ -22,7 +22,7 @@ public sealed class DataConfig
     [JsonIgnore]
     public string Path => Join(Root, "path");
     [JsonIgnore]
-    public string ExpDbc => Join(Root, "dbc", ContentExp(Exp));
+    public string ExpDbc => Join(Root, "dbc", Exp);
     [JsonIgnore]
     public string PathInfo => Join(Root, "PathInfo");
     [JsonIgnore]
@@ -124,8 +124,9 @@ public sealed class DataConfig
     }
 
     /// <summary>
-    /// Which per-expansion data folder (dbc, area, experience, subzones, History,
-    /// npcspawnlocations, mailboxlocations) a client reads.
+    /// Which per-expansion data folder (area, experience, subzones, History,
+    /// npcspawnlocations, mailboxlocations) a client reads. Not dbc: Forever's DBC
+    /// scope is its own (Json/dbc/forever, from ReadDBC_CSV -v forever).
     ///
     /// INTERIM: WoW: Forever has no extracted data of its own yet, so it reads the
     /// Classic Era ("som") set. Unverified - spell/item/creature IDs and XP tables

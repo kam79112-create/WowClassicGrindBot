@@ -20,6 +20,8 @@ public sealed class WApi
             ClientVersion.Wrath or ClientVersion.Legacy_Wrath => "https://www.wowhead.com/wotlk",
             ClientVersion.Cata or ClientVersion.Legacy_Cata => "https://www.wowhead.com/cata",
             ClientVersion.Mop or ClientVersion.Legacy_Mop => "https://www.wowhead.com/mop-classic",
+            // WoW: Forever - no dedicated Wowhead branch known; retail kept deliberately. See PORT_NOTES.md.
+            ClientVersion.Forever => "https://www.wowhead.com",
             _ => "https://www.wowhead.com",
         };
 

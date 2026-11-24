@@ -94,7 +94,8 @@ local IsCurrentSpell = IsCurrentSpell
 local UnitIsVisible = UnitIsVisible
 local GetPetHappiness = GetPetHappiness
 
-local ammoSlot = GetInventorySlotInfo("AmmoSlot")
+-- pcall: a client without an ammo slot raises on the lookup at load time.
+local _, ammoSlot = pcall(GetInventorySlotInfo, "AmmoSlot")
 
 local spellRangeNameCache = {}
 local spellRangeUnitNameCache = {}
@@ -998,7 +999,7 @@ end
 
 function DataToColor:HasAmmo()
     -- After Cataclysm, ammo slot was removed
-    if DataToColor:IsClassicPreCata() == false then
+    if not DataToColor.HasAmmoSlot() then
         return true
     end
 
@@ -1008,7 +1009,7 @@ end
 
 function DataToColor:PetHappy()
     -- After Cataclysm, pet always happy :)
-    if DataToColor:IsClassicPreCata() == false then
+    if not DataToColor.HasPetHappiness() then
         return true
     end
 

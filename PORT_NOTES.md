@@ -1,120 +1,127 @@
 # WoW: Forever port notes
 
-Branch: `forever-port`. Rule: every client fact below was **measured in the client**.
-Anything not measured is listed under *Open* and is not assumed by the code.
+- **Modern client.** WoW: Forever is a new official Blizzard product (Battle.net,
+  worldofwarcraft.blizzard.com/forever), version 1.60.1, build 70959, on a modern engine.
+  It is **not** vanilla 1.12.
+- **No legacy paths.** Nothing routes Forever into `DataToColor.IsLegacy()`. No
+  Interact With Target workaround, no secure-button workaround, no `Legacy/*.lua` loads.
+- **`WOW_PROJECT_ID` = 18.** The client defines no `WOW_PROJECT_*` constant for it, so
+  the code uses the literal 18.
+- **Interface 16001.**
+- **Locale ruRU** until the client is switched to **enUS**.
 
-## Corrections (read first)
+Branch: `forever-port`. Each fact below is tagged *measured* (dumped in the client),
+*derived* (computed from measured facts) or *user* (stated by the user, not dumped).
+Anything else is under *Open* and is not assumed by the code.
 
-- WoW: Forever is **not** vanilla 1.12. It is a new official Blizzard product
-  (Battle.net, worldofwarcraft.blizzard.com/forever) on a **modern engine**.
-- Therefore: **no** legacy code paths, **no** "Interact With Target" workaround, **no**
-  secure-button workaround. Nothing may route Forever into `DataToColor.IsLegacy()`.
-- The talent tree is **not** the vanilla tree: more tiers, different talents.
-  Improved Blizzard is unreachable before ~level 30. Never derive spells or talents
-  from vanilla rank tables.
+## Facts
 
-## Measured facts
-
-| Fact | Value | Source |
+| Fact | Value | Tag |
 |---|---|---|
-| `GetBuildInfo()` version | `1.60.1` | `/dump` in client |
+| `GetBuildInfo()` version | `1.60.1` | measured |
 | Build | `70959` | user |
-| `WOW_PROJECT_ID` | **18** | `/dump` in client |
-| `WOW_PROJECT_FOREVER` | `nil`: the client defines no constant, so the code uses the literal 18 | `/dump` in client |
-| `GetLocale()` | `ruRU` | `/dump` in client |
+| `WOW_PROJECT_ID` | `18` (no collision with 1, 2, 5, 11, 14, 19, 91–95) | measured |
+| `WOW_PROJECT_FOREVER` | `nil` | measured |
+| `GetLocale()` | `ruRU` | measured |
+| `## Interface:` | `16001` = 1·10000 + 60·100 + 1 | **derived**. Confirm: `/dump select(4, GetBuildInfo())` |
+| Interact With Target | present, default Alt-Home | user (modern-client reasoning, not checked in Key Bindings) |
 | Mage @22 talents | Frost 6 (Improved Frostbolt 5/5 + 1 in tier 2), Arcane 7, 0 unspent | user |
+| Talent tree | not vanilla: more tiers, different talents; Improved Blizzard ~30 | user |
 
-18 does not collide with any existing `ClientVersion` value (1, 2, 5, 11, 14, 19, 91–95),
-so no build-range branching is needed.
+## Consequences of ID 18 / Interface 16001 in the addon
 
-## What changed
+ID 18 makes `IsClassic()`, `IsClassic_*()`, `IsRetail()` and `IsClassicPreCata()` all
+**false**, and `IsClassicEra()` **true**. Because 16001 < 20000, `IsVanilla()` is **true**.
+Every branch keyed on those was audited:
+
+| Behaviour | Before (ID 18 fell through) | Now | Why |
+|---|---|---|---|
+| Focus unit (`Constants.lua`) | `focus` | `party1` via `IsForever()` | `SetupDefaultBindings` already binds `TARGETPARTYMEMBER1` (IsVanilla), so the old state was **inconsistent**. Now addon unit + binding + C# (`ClassConfiguration`) all agree. |
+| CLEU spellId=0 fallback (`SoM_OnCast*`) | off | on via `IsForever()` | Harmless if the combat log carries IDs: it only fills in when the ID is 0. |
+| Ammo slot | always "has ammo" | `HasAmmoSlot()`: **feature-detected** (`pcall(GetInventorySlotInfo,"AmmoSlot")`) | Unmeasured, so detected rather than assumed |
+| Pet happiness | always happy | `HasPetHappiness()`: **feature-detected** (`GetPetHappiness ~= nil`) | Same |
+| LibClassicCasterino | off | off | The lib exits on anything except `WOW_PROJECT_CLASSIC`. Modern engine: native `UnitCastingInfo` assumed. Dropped from the Forever TOC's OptionalDeps. |
+| `Query.lua` ammoSlot lookup | hard call | `pcall` | A client without the slot would error at load time |
+
+If `/dump BINDING_NAME_TARGETFOCUS` is non-nil on Forever, flip the focus choice in
+**three** places together: `Constants.lua`, `SetupDefaultBindings.lua` (IsVanilla
+branches) and `Core/ClassConfig/ClassConfiguration.cs`.
+
+## C# / data changes
 
 | File | Change |
 |---|---|
 | `SharedLib/AddonDataProviderType/ClientVersion.cs` | `Forever = 18` |
-| `SharedLib/StartupConfig/StartupClientVersion.cs` | exe `FileVersion` `{1, 60}` → `(Forever, "forever")`. **Must** come before the SoM arm, otherwise `1.60` matches `{1, >=13}` and the bot thinks it is Classic Era. |
-| `DataConfig/DataConfig.cs` | `ClientEra("forever") = "precata"`; new `ContentExp()` (see interim below) |
-| `Frontend/wwwroot/script/leaflet-watch.js` | `clientEra('forever') = 'precata'` (JS mirror of `ClientEra`) |
-| `Addons/DataToColor/Versions.lua` | `DataToColor.IsForever()` = `WOW_PROJECT_ID == 18` (project ID, not build range). `ClientVersion = WOW_PROJECT_ID` already yields 18 unpatched. |
-| `Addons/DataToColor/*.toc` | patch bump 1.13.3 → 1.13.4 (Lua changed) |
-| `Json/class/Mage_22_Frost_Forever.json` | single-target profile, spells gated by `Spell:<id>` IntVariables |
-| `SharedLib/CLAUDE.md` | enum count 12 → 13 |
+| `SharedLib/StartupConfig/StartupClientVersion.cs` | exe `FileVersion {1, 60}` → `(Forever, "forever")`, **before** the SoM arm (otherwise 1.60 matched `{1, >=13}` = Classic Era) |
+| `DataConfig/DataConfig.cs` | `ClientEra("forever") = "precata"` (navmesh, tiles, road, area_grid). DBC scope = **`Json/dbc/forever`**. `ContentExp()`: area, experience, subzones, History, npcspawnlocations and mailboxlocations read `som` (interim) |
+| `Frontend/wwwroot/script/leaflet-watch.js` | `clientEra('forever') = 'precata'` (JS mirror) |
+| `Core/ClassConfig/ClassConfiguration.cs` | `SoM or Forever` → `TARGETPARTYMEMBER1` |
+| `Core/WowheadAPI/WApi.cs` | explicit `Forever` arm → retail Wowhead (no known Forever site) |
+| `Utilities/ReadDBC_CSV/Program.cs` | `Forever → "1.60.1.70959"`; outputs to `Json/dbc/forever` |
+| `Addons/DataToColor/DataToColor_Forever.toc` | Interface 16001, Classic load order, no Legacy loads, Notes "(Forever)" |
+| `Addons/DataToColor/*.toc` | 1.13.3 → 1.13.4 |
+| `Core/Configurator/AddonConfigurator.cs` | **unchanged**: already installs to `<process dir>\Interface\AddOns` and copies every `*.toc` |
+| `Game/WoWProcess/WowProcess.cs` | **unchanged**: `Wow` is already listed, but the exe name is not confirmed from the install dir |
 
-Not built here: the cloud container has no .NET SDK and cannot reach Microsoft's
-download host. Run `dotnet build -c Release` on Windows.
+`PathingAPI` default exp (`som`), `Stance.cs` (Wrath-only branch) and
+`FrameConfigurator` (`!= None`) need no Forever case.
 
-## Interim decisions (unverified, marked in code)
+### Not runnable yet
 
-1. **Data folder = `som`.** `DataConfig.ContentExp("forever")` returns `"som"` for dbc,
-   area, experience, subzones, History, npcspawnlocations and mailboxlocations, because
-   no `Json/*/forever` data exists yet. Spell, item and creature IDs and the XP table may
-   differ in 1.60.1. Remove the arm once Forever data is extracted. `ReadDBC_CSV` has no
-   Forever build entry, and wago.tools availability for build 70959 is unchecked.
-2. **Era = `precata`** for navmesh, tiles, road and area_grid. The geometry has not been
-   hash-compared against a 1.15 client yet. If the world differs, give Forever its own era.
-3. **Wowhead:** `WApi` falls to the default (retail) branch for Forever. Left as is: which
-   site (if any) covers Forever is unknown.
+- **`Json/dbc/forever` does not exist.** The bot will not start on Forever until you run
+  `ReadDBC_CSV -v forever` on the PC. From the cloud container wago.tools was
+  unreachable, so it is unknown whether wago carries build 70959. If it does not, the
+  DBC data has to come from the client's own CASC archives.
+- **Not compiled.** The container has no .NET SDK and cannot reach Microsoft's download
+  host. Run `dotnet build -c Release` on Windows. Lua was syntax-checked (parser only).
 
-## Addon behaviour with ID 18 (not changed, needs verification)
+## Verify the TOC is the one that loads
 
-ID 18 makes `IsClassic()` and `IsClassicPreCata()` false, and `IsClassicEra()` true.
-Effects:
-
-- Focus unit = `focus` (not the `party1` vanilla hack); the C# side uses `TARGETFOCUS`.
-  Correct only if Forever has a focus unit and binding.
-- Ammo and pet happiness are treated as "post-Cata" (always OK). Wrong for hunters if
-  Forever has ammo or happiness.
-- The SoM cast-event handlers and LibClassicCasterino are **off**. Correct if
-  `UnitCastingInfo` works for all units (modern engine: likely, but unverified).
-- `IsVanilla()` depends on the TOC number from `GetBuildInfo()` (4th return), which is
-  not measured yet.
+Which TOC suffix the Forever client reads is **unknown**. Known suffixes are `_Vanilla`,
+`_Classic`, `_TBC`, `_Wrath`, `_Cata`, `_Mists` and `_Mainline`. If it does not read
+`_Forever`, it falls back to `DataToColor.toc`, the legacy Cata TOC (Interface 40300),
+and the addon shows as out of date. Check:
+```
+/dump C_AddOns.GetAddOnMetadata("DataToColor", "Notes")
+```
+Expected: `Displays data as colors (Forever)`.
 
 ## Localization
 
-The client is **ruRU**. Profiles and `NpcNameFinder` assume English names: spell and buff
-names in profiles, and NPC name plates matched against English DBC names.
-
-- Switch the client to **enUS** (Battle.net → game settings → Text language).
-- Where a name cannot be avoided, use `Spell:<IntVariable>` with the spell ID from the
-  spellbook, and `Buff_<name>: <iconId>` IntVariables for auras (icon ID, not spell ID).
+ruRU client. Profiles and `NpcNameFinder` match English names (spell and buff names,
+nameplates against English DBC). Switch the client to **enUS**. Where a name is
+unavoidable, use `Spell:<IntVariable>` (spellbook ID) and `Buff_<name>: <iconId>` (icon
+ID, not spell ID).
 
 ## Mage_22_Frost_Forever.json
 
-- Single target only: no Blizzard, Arcane Explosion or Cone of Cold. Frost Nova only
-  when no adds are visible.
-- Every spell is gated by `Spell:Spell_*`. All IDs ship as **0**, so the profile is inert
-  until the real IDs are filled in. Fill them from the spellbook dump below.
-- `Item_Conjure_*` = 0: conjured food and water item IDs are unknown for Forever.
-- `PathFilename` is empty: pick a route for your zone.
-- Default keys: 1 Frostbolt, 3 Frost Armor, 4 Arcane Intellect, 5 Fire Blast,
-  6 Frost Nova, 8 Conjure Food, 9 Conjure Water, 0 Shoot, N1 food, N2 drink.
+Single target only. No Blizzard, Arcane Explosion or Cone of Cold. Frost Nova only when
+no adds are visible. Every spell is gated by `Spell:Spell_*`; all IDs ship as **0**, so the
+profile stays inert until they are filled from the spellbook. Never fill them from vanilla
+rank tables. `Item_Conjure_*` = 0 and `PathFilename` is empty.
+Default keys: 1 Frostbolt, 3 Frost Armor, 4 Arcane Intellect, 5 Fire Blast, 6 Frost Nova,
+8/9 Conjure Food/Water, 0 Shoot, N1/N2 eat/drink.
 
-### Dump commands (run in client, enUS)
-
-Spellbook, old API:
+Spellbook (try the first line; if it errors, use the second):
 ```
 /run for i=1,200 do local n=GetSpellBookItemName(i,"spell") if not n then break end print(i,n,select(2,GetSpellBookItemInfo(i,"spell"))) end
-```
-Spellbook, `C_SpellBook` API (if the line above errors):
-```
 /run local B,P=C_SpellBook,Enum.SpellBookSpellBank.Player for i=1,200 do local n=B.GetSpellBookItemName(i,P) if not n then break end print(i,n,B.GetSpellBookItemInfo(i,P).spellID) end
 ```
-Player buff icon IDs (cast Frost Armor and Arcane Intellect first):
+Buff icons:
 ```
 /run for i=1,40 do local a=C_UnitAuras.GetBuffDataByIndex("player",i) if not a then break end print(a.name,a.icon,a.spellId) end
 ```
-Bag item IDs (conjured food and water):
+Bag item IDs:
 ```
 /run for b=0,4 do for s=1,C_Container.GetContainerNumSlots(b) do local id=C_Container.GetContainerItemID(b,s) if id then print(b,s,id,C_Container.GetContainerItemLink(b,s)) end end end
 ```
 
-## Open (still needed, not blocking)
+## Open
 
-- [ ] `## Interface:` number → then create `Addons/DataToColor/DataToColor_Forever.toc`.
-      Not created yet on purpose: no guessed Interface number.
-- [ ] Client exe name → add to `Game/WoWProcess/WowProcess.cs` `defaultProcessNames`.
-- [ ] Exe `FileVersion` (Explorer → Properties → Details). The mapping assumes `1.60.x`.
-- [ ] "Interact With Target" present in Key Bindings?
-- [ ] Improved Blizzard tier and point requirement (expected ~30).
-- [ ] Focus unit and binding exist? Ammo slot and pet happiness exist?
-- [ ] Spell, buff-icon and conjured-item IDs for the Mage profile (dumps above).
+- [ ] Exe name: `Get-ChildItem "<client dir>" -Filter *.exe`, and its FileVersion (expected 1.60.x)
+- [ ] `/dump select(4, GetBuildInfo())` = 16001?
+- [ ] Which TOC loads (Notes check above)
+- [ ] `/dump BINDING_NAME_TARGETFOCUS, GetPetHappiness, GetInventorySlotInfo("AmmoSlot")`
+- [ ] Generate `Json/dbc/forever` (ReadDBC_CSV or CASC)
+- [ ] Geometry: hash-compare Forever ADTs vs 1.15 before trusting `precata`
+- [ ] Spell, buff-icon and conjured-item IDs for the Mage profile

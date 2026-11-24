@@ -21,7 +21,9 @@ DataToColor.C.unitPartyPetNames = {}
 -- Vanilla has no focus unit. IsClassic() and not a raw `WOW_PROJECT_ID ==
 -- WOW_PROJECT_CLASSIC`: on a Legacy client (4.3.4, 5.4.8) both globals are nil,
 -- so the raw compare is nil == nil and would strip focus support there.
-if DataToColor.IsClassic() then
+-- WoW: Forever follows Classic Era here (1.x binding set: TARGETPARTYMEMBER1, see
+-- SetupDefaultBindings IsVanilla()). Unmeasured: /dump BINDING_NAME_TARGETFOCUS.
+if DataToColor.IsClassic() or DataToColor.IsForever() then
     DataToColor.C.unitFocus = "party1"
     DataToColor.C.unitFocusTarget = "party1target"
 else

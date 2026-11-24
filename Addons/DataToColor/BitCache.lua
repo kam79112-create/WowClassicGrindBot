@@ -269,7 +269,7 @@ local function UpdatePetCache()
     bits1Cache.petIsAlive = petVisible and not petDead
 
     -- Pet happiness (Classic only)
-    if DataToColor:IsClassicPreCata() then
+    if DataToColor.HasPetHappiness() then
         bits1Cache.petIsHappy = GetPetHappiness() == 3
     else
         bits1Cache.petIsHappy = true
@@ -353,7 +353,7 @@ local function UpdateEquipmentCache()
     bits1Cache.equipmentBroken = DataToColor:GetInventoryBroken() > 0
 
     -- Ammo (Classic only)
-    if DataToColor:IsClassicPreCata() then
+    if DataToColor.HasAmmoSlot() then
         bits1Cache.hasAmmo = DataToColor:HasAmmo()
     else
         bits1Cache.hasAmmo = true

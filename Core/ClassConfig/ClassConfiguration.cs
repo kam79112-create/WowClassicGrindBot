@@ -302,8 +302,9 @@ public sealed partial class ClassConfiguration
 
         RequirementFactory factory = new(sp, this);
 
-        // Vanilla has no TARGETFOCUS binding — use TARGETPARTYMEMBER1 instead
-        if (playerReader.Version == ClientVersion.SoM)
+        // Vanilla has no TARGETFOCUS binding — use TARGETPARTYMEMBER1 instead.
+        // Forever mirrors the addon (Constants.lua / SetupDefaultBindings.lua): keep in step.
+        if (playerReader.Version is ClientVersion.SoM or ClientVersion.Forever)
         {
             TargetFocus.BindingID = BindingID.TARGETPARTYMEMBER1;
         }

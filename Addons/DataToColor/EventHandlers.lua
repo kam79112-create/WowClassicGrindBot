@@ -172,7 +172,8 @@ function DataToColor:RegisterEvents()
     -- Must go through IsClassic(): on a Legacy client (4.3.4, 5.4.8) both
     -- WOW_PROJECT_ID and WOW_PROJECT_CLASSIC are nil, so a raw `==` compare is
     -- nil == nil and these vanilla-only handlers would register there too.
-    if DataToColor.IsClassic() then
+    -- WoW: Forever: same fallback. Only fills spellId when the combat log reports 0.
+    if DataToColor.IsClassic() or DataToColor.IsForever() then
         DataToColor:RegisterEvent('UNIT_SPELLCAST_START', 'SoM_OnCastStart')
         DataToColor:RegisterEvent('UNIT_SPELLCAST_SUCCEEDED', 'SoM_OnCastSuccess')
         DataToColor:RegisterEvent('UNIT_SPELLCAST_FAILED', 'SoM_OnCastFailed')
@@ -225,7 +226,7 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('UNIT_POWER_UPDATE', 'OnUnitPowerUpdate_ActionCache')
 
     -- Classic-only events
-    if DataToColor:IsClassicPreCata() then
+    if DataToColor.HasPetHappiness() then
         DataToColor:RegisterEvent('UNIT_HAPPINESS', 'OnPetHappiness_BitCache')
     end
 end

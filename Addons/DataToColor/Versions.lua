@@ -65,6 +65,21 @@ function DataToColor.IsClassicPreCata()
   return DataToColor.IsClassic() or DataToColor.IsClassic_BCC() or DataToColor.IsClassic_Wrath()
 end
 
+-- Ammo slot / pet happiness. Pre-Cata Classic has both. On WoW: Forever this is
+-- feature-detected, not assumed: 1.x content, but a modern engine with a
+-- different talent tree, so whether these survived is unmeasured.
+local hasAmmoSlotApi, ammoSlotId = pcall(GetInventorySlotInfo, "AmmoSlot")
+local foreverHasAmmo = DataToColor.IsForever() and hasAmmoSlotApi and ammoSlotId ~= nil
+local foreverHasHappiness = DataToColor.IsForever() and GetPetHappiness ~= nil
+
+function DataToColor.HasAmmoSlot()
+  return DataToColor.IsClassicPreCata() or foreverHasAmmo
+end
+
+function DataToColor.HasPetHappiness()
+  return DataToColor.IsClassicPreCata() or foreverHasHappiness
+end
+
 local LibClassicCasterino
 if DataToColor.IsClassic() then
   LibClassicCasterino = _G.LibStub("LibClassicCasterino")
