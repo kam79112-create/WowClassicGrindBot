@@ -99,12 +99,23 @@ branches) and `Core/ClassConfig/ClassConfiguration.cs`.
 
 ### Not runnable yet
 
-- **`Json/dbc/forever` does not exist.** The bot will not start on Forever until you run
-  `ReadDBC_CSV -v forever` on the PC. From the cloud container wago.tools was
-  unreachable, so it is unknown whether wago carries build 15400. If it does not, the
-  DBC data has to come from the client's own CASC archives.
 - **Not compiled.** The container has no .NET SDK and cannot reach Microsoft's download
   host. Run `dotnet build -c Release` on Windows. Lua was syntax-checked (parser only).
+
+### DBC data — interim baseline
+
+`Json/dbc/forever/` was seeded from `Json/dbc/som/` (Classic Era 1.15). Forever is
+WoW 1.60 — same pre-Cataclysm world, same spell IDs (all seven Mage profile IDs
+confirmed present in SoM data). **This unblocks startup.** Known gaps:
+
+- Talent data differs (more tiers, different talents on Forever). `talent.json` and
+  `talenttab.json` are SoM values — talent training UI may show wrong trees.
+- Creatures, items, XP tables may differ between 1.15 and 1.60.
+- `WorldMapArea.json`: same pre-Cata zone IDs, expected to match.
+
+Replace with correct data once wago.tools carries build 15400, or extract from the
+client's own CASC archives and run `ReadDBC_CSV -v forever` on Windows. The output goes
+to `Json/dbc/forever/` and replaces these files.
 
 ## Verify the TOC is the one that loads
 
