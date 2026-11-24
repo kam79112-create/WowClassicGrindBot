@@ -116,6 +116,143 @@ function DataToColor.HasPetHappiness()
   return DataToColor.IsClassicPreCata() or foreverHasHappiness
 end
 
+--------------------------------------------------------------------------------
+-- WoW: Forever — missing global API shims (feature-detected, `if not X`).
+-- Versions.lua loads first so every subsequent file's `local X = X` picks up
+-- the shimmed global. All guarded by IsForever() so other clients are untouched.
+--------------------------------------------------------------------------------
+if DataToColor.IsForever() then
+
+  -- GetSpellBookItemInfo(index, bookType) -> itemType, actionID
+  if not GetSpellBookItemInfo and C_SpellBook and C_SpellBook.GetSpellBookItemInfo then
+    GetSpellBookItemInfo = function(index, bookType)
+      local info = C_SpellBook.GetSpellBookItemInfo(index, bookType)
+      if not info then return nil end
+      return info.itemType, info.actionID
+    end
+  end
+
+  -- IsSpellInRange(spell, unit, target) -> 0/1/nil
+  if not IsSpellInRange and C_Spell and C_Spell.IsSpellInRange then
+    IsSpellInRange = function(spell, unit, target)
+      return C_Spell.IsSpellInRange(spell, unit, target)
+    end
+  end
+
+  -- GetSpellCooldown(spellID) -> startTime, duration, isEnabled, modRate
+  if not GetSpellCooldown and C_Spell and C_Spell.GetSpellCooldown then
+    GetSpellCooldown = function(spell)
+      local info = C_Spell.GetSpellCooldown(spell)
+      if not info then return 0, 0, 1, 1 end
+      return info.startTime, info.duration,
+        info.isEnabled and 1 or 0, info.modRate or 1
+    end
+  end
+
+  -- IsUsableSpell(spellID) -> isUsable, notEnoughMana
+  if not IsUsableSpell and C_Spell and C_Spell.IsSpellUsable then
+    IsUsableSpell = function(spell)
+      local info = C_Spell.IsSpellUsable(spell)
+      if not info then return false, false end
+      return info.isUsable, info.notEnoughMana
+    end
+  end
+
+  -- GetSpellTexture(spellID) -> texture
+  if not GetSpellTexture and C_Spell and C_Spell.GetSpellTexture then
+    GetSpellTexture = function(spell)
+      return C_Spell.GetSpellTexture(spell)
+    end
+  end
+
+  -- Aura shims: MUST return LEGACY 8-value layout so AuraCache's GetAuraInfo
+  -- probe works. GetAuraInfo checks a2 (rank) as a texture path and falls
+  -- through to a3 when it is not a string path; wrong layout makes it read
+  -- count as icon and breaks every buff/debuff check.
+  -- Layout: name, rank(""), icon, count, dispelName, duration, expirationTime, sourceUnit
+  if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+    local function AuraToLegacy(data)
+      if not data then return nil end
+      return data.name, "", data.icon,
+        data.applications or 0, data.dispelName or "",
+        data.duration or 0, data.expirationTime or 0,
+        data.sourceUnit or ""
+    end
+
+    if not UnitBuff then
+      UnitBuff = function(unit, index, filter)
+        return AuraToLegacy(
+          C_UnitAuras.GetAuraDataByIndex(unit, index, "HELPFUL"))
+      end
+    end
+
+    if not UnitDebuff then
+      UnitDebuff = function(unit, index, filter)
+        return AuraToLegacy(
+          C_UnitAuras.GetAuraDataByIndex(unit, index, "HARMFUL"))
+      end
+    end
+
+    if not UnitAura then
+      UnitAura = function(unit, index, filter)
+        local f = filter or ""
+        local helpful = f == "" or f:find("HELPFUL") ~= nil
+        local harmful = f == "" or f:find("HARMFUL") ~= nil
+        if helpful then
+          local d = C_UnitAuras.GetAuraDataByIndex(unit, index, "HELPFUL")
+          if d then return AuraToLegacy(d) end
+        end
+        if harmful then
+          local d = C_UnitAuras.GetAuraDataByIndex(unit, index, "HARMFUL")
+          if d then return AuraToLegacy(d) end
+        end
+      end
+    end
+  end
+
+  -- GetContainerNumSlots(bag) -> numSlots
+  if not GetContainerNumSlots and C_Container and C_Container.GetContainerNumSlots then
+    GetContainerNumSlots = function(bag)
+      return C_Container.GetContainerNumSlots(bag)
+    end
+  end
+
+  -- GetContainerItemInfo(bag, slot): LEGACY flat return order —
+  -- iconFileID, stackCount, isLocked, quality, isReadable, hasLoot,
+  -- hyperlink, isFiltered, hasNoValue, itemID, isBound
+  if not GetContainerItemInfo and C_Container and C_Container.GetContainerItemInfo then
+    GetContainerItemInfo = function(bag, slot)
+      local info = C_Container.GetContainerItemInfo(bag, slot)
+      if not info then return nil end
+      return info.iconFileID, info.stackCount, info.isLocked,
+        info.quality, info.isReadable, info.hasLoot,
+        info.hyperlink, info.isFiltered, info.hasNoValue,
+        info.itemID, info.isBound
+    end
+  end
+
+  -- GetPetActionInfo: mage has no pet. Try C_PetInfo first; nil stub is safe.
+  if not GetPetActionInfo then
+    GetPetActionInfo = function(index)
+      if C_PetInfo and C_PetInfo.GetPetActionInfo then
+        return C_PetInfo.GetPetActionInfo(index)
+      end
+      return nil
+    end
+  end
+
+  -- GetPetHappiness: nil stub (no pet on this character).
+  if not GetPetHappiness then
+    GetPetHappiness = function()
+      if C_PetInfo and C_PetInfo.GetPetHappiness then
+        return C_PetInfo.GetPetHappiness()
+      end
+      return nil
+    end
+  end
+
+end -- DataToColor.IsForever() shims
+
 local LibClassicCasterino
 if DataToColor.IsClassic() then
   LibClassicCasterino = _G.LibStub("LibClassicCasterino")
