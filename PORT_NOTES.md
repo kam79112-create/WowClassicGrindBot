@@ -1,7 +1,9 @@
 # WoW: Forever port notes
 
 - **Modern client.** WoW: Forever is a new official Blizzard product (Battle.net,
-  worldofwarcraft.blizzard.com/forever), version 1.60.1, build 70959, on a modern engine.
+  worldofwarcraft.blizzard.com/forever), version 1.60.1, client build **15400**
+  (`Debug: 1.60.1.15400 (core 172)` on screen; 70959 is the CDN summary build, not the
+  client build), on a modern engine.
   It is **not** vanilla 1.12.
 - **No legacy paths.** Nothing routes Forever into `DataToColor.IsLegacy()`. No
   Interact With Target workaround, no secure-button workaround, no `Legacy/*.lua` loads.
@@ -19,7 +21,10 @@ Anything else is under *Open* and is not assumed by the code.
 | Fact | Value | Tag |
 |---|---|---|
 | `GetBuildInfo()` version | `1.60.1` | measured |
-| Build | `70959` | user |
+| Client build | `15400` (`Debug: 1.60.1.15400 (core 172)`). 70959 = CDN summary build, **not** used | user (on-screen) |
+| `GetBuildInfo()` return count | **1** (version string only, no TOC number) | user |
+| `GetSpellInfo` global | **absent**, lives in `C_Spell.GetSpellInfo` | user |
+| TOC suffixes auto-loaded | `_Mainline _Classic _Vanilla _TBC _Wrath _Cata _Mists` only; `_Forever` ignored | user |
 | `WOW_PROJECT_ID` | `18` (no collision with 1, 2, 5, 11, 14, 19, 91–95) | measured |
 | `WOW_PROJECT_FOREVER` | `nil` | measured |
 | `GetLocale()` | `ruRU` | measured |
@@ -27,6 +32,32 @@ Anything else is under *Open* and is not assumed by the code.
 | Interact With Target | present, default Alt-Home | user (modern-client reasoning, not checked in Key Bindings) |
 | Mage @22 talents | Frost 6 (Improved Frostbolt 5/5 + 1 in tier 2), Arcane 7, 0 unspent | user |
 | Talent tree | not vanilla: more tiers, different talents; Improved Blizzard ~30 | user |
+
+## Load-critical fixes (addon died at load without these)
+
+1. **`buildVersion` never nil.** `select(4, GetBuildInfo())` is nil on Forever and
+   `buildVersion < 20000` then raised at load. Now: 4th value -> parsed from the version
+   string (`1.60.1` -> 16001) -> assume Forever (16001). Exposed as `DataToColor.BuildVersion`.
+2. **`GetSpellInfo` shim.** `Versions.lua` probes `GetSpellInfo(6603)` at load. When the
+   global is missing and `C_Spell.GetSpellInfo` exists, it is rebuilt in the classic
+   short layout (`name, rank, icon, castTime, minRange, maxRange, spellID, originalIcon`)
+   and published as `DataToColor.GetSpellInfo`; `EventHandlers`, `Query` and `Trainer` bind
+   that instead of the global. Feature-detected: clients with the global are untouched.
+3. **API report.** On Forever the addon prints once at load which spell/aura/container
+   globals are missing. Paste that line here; it is the list of the next shims needed.
+
+Simulated with a Lua runtime (Forever mock: 1-value `GetBuildInfo`, no `GetSpellInfo`,
+`C_Spell` present): `Versions.lua` loads to the end, BuildVersion 16001, ClientVersion 18,
+IsLegacy false, `GetSpellInfo(6603)` -> "Attack". Legacy 4.3.4 mock: BuildVersion 40300,
+ClientVersion 94, unchanged. A mock is not the client: confirm in-game.
+
+## TOC
+
+The plain `DataToColor.toc` in the repo is the legacy 4.3.4 / 5.4.8 TOC (Ace3 v5,
+`Legacy/*.lua`, cTimerBackport). Overwriting it in the repo would break those clients.
+Instead `AddonConfigurator.ApplyClientToc()` copies `DataToColor_Forever.toc` over
+`DataToColor.toc` **at install time** when the running exe is Forever. The suffixed
+file in the repo is the source and documentation; the client never reads it directly.
 
 ## Consequences of ID 18 / Interface 16001 in the addon
 
@@ -52,15 +83,15 @@ branches) and `Core/ClassConfig/ClassConfiguration.cs`.
 | File | Change |
 |---|---|
 | `SharedLib/AddonDataProviderType/ClientVersion.cs` | `Forever = 18` |
-| `SharedLib/StartupConfig/StartupClientVersion.cs` | exe `FileVersion {1, 60}` → `(Forever, "forever")`, **before** the SoM arm (otherwise 1.60 matched `{1, >=13}` = Classic Era) |
+| `SharedLib/StartupConfig/StartupClientVersion.cs` | exe `FileVersion {1, 60}` → `(Forever, "forever")`, **before** the SoM arm (otherwise 1.60 matched `{1, >=13}` = Classic Era). Unparsable/missing version (`0.0`) → assume Forever. Only picks data folders at startup; at runtime the addon's `WOW_PROJECT_ID` 18 is authoritative |
 | `DataConfig/DataConfig.cs` | `ClientEra("forever") = "precata"` (navmesh, tiles, road, area_grid). DBC scope = **`Json/dbc/forever`**. `ContentExp()`: area, experience, subzones, History, npcspawnlocations and mailboxlocations read `som` (interim) |
 | `Frontend/wwwroot/script/leaflet-watch.js` | `clientEra('forever') = 'precata'` (JS mirror) |
 | `Core/ClassConfig/ClassConfiguration.cs` | `SoM or Forever` → `TARGETPARTYMEMBER1` |
 | `Core/WowheadAPI/WApi.cs` | explicit `Forever` arm → retail Wowhead (no known Forever site) |
-| `Utilities/ReadDBC_CSV/Program.cs` | `Forever → "1.60.1.70959"`; outputs to `Json/dbc/forever` |
+| `Utilities/ReadDBC_CSV/Program.cs` | `Forever → "1.60.1.15400"`; outputs to `Json/dbc/forever` |
 | `Addons/DataToColor/DataToColor_Forever.toc` | Interface 16001, Classic load order, no Legacy loads, Notes "(Forever)" |
 | `Addons/DataToColor/*.toc` | 1.13.3 → 1.13.4 |
-| `Core/Configurator/AddonConfigurator.cs` | **unchanged**: already installs to `<process dir>\Interface\AddOns` and copies every `*.toc` |
+| `Core/Configurator/AddonConfigurator.cs` | installs to `<process dir>\Interface\AddOns`; on Forever swaps `DataToColor_Forever.toc` in as `DataToColor.toc` (see TOC) |
 | `Game/WoWProcess/WowProcess.cs` | **unchanged**: `Wow` is already listed, but the exe name is not confirmed from the install dir |
 
 `PathingAPI` default exp (`som`), `Stance.cs` (Wrath-only branch) and
@@ -70,21 +101,19 @@ branches) and `Core/ClassConfig/ClassConfiguration.cs`.
 
 - **`Json/dbc/forever` does not exist.** The bot will not start on Forever until you run
   `ReadDBC_CSV -v forever` on the PC. From the cloud container wago.tools was
-  unreachable, so it is unknown whether wago carries build 70959. If it does not, the
+  unreachable, so it is unknown whether wago carries build 15400. If it does not, the
   DBC data has to come from the client's own CASC archives.
 - **Not compiled.** The container has no .NET SDK and cannot reach Microsoft's download
   host. Run `dotnet build -c Release` on Windows. Lua was syntax-checked (parser only).
 
 ## Verify the TOC is the one that loads
 
-Which TOC suffix the Forever client reads is **unknown**. Known suffixes are `_Vanilla`,
-`_Classic`, `_TBC`, `_Wrath`, `_Cata`, `_Mists` and `_Mainline`. If it does not read
-`_Forever`, it falls back to `DataToColor.toc`, the legacy Cata TOC (Interface 40300),
-and the addon shows as out of date. Check:
+After install, `Interface\AddOns\<Title>\<Title>.toc` must start with `## Interface: 16001`.
+In game:
 ```
 /dump C_AddOns.GetAddOnMetadata("DataToColor", "Notes")
 ```
-Expected: `Displays data as colors (Forever)`.
+Expected: `Displays data as colors (Forever)`. (Use your addon Title if it was renamed.)
 
 ## Localization
 
@@ -95,12 +124,16 @@ ID, not spell ID).
 
 ## Mage_22_Frost_Forever.json
 
+Spell IDs from the player's own action bar dump (user): Frostbolt 7322, Frost Nova 122,
+Fire Blast 2138, Ice Armor 7301, Conjure Water 5506, Conjure Food 990, Shoot (wand) 5019.
+Each action is gated by `Spell:SPELL_*`. `Name` is only a label (the key is pressed);
+buff checks such as `!Ice Armor` resolve by **icon ID** in `Storage.lua`, not by text, so
+they work on ruRU too, provided Forever uses the same icon IDs (unverified).
+
 Single target only. No Blizzard, Arcane Explosion or Cone of Cold. Frost Nova only when
-no adds are visible. Every spell is gated by `Spell:Spell_*`; all IDs ship as **0**, so the
-profile stays inert until they are filled from the spellbook. Never fill them from vanilla
-rank tables. `Item_Conjure_*` = 0 and `PathFilename` is empty.
-Default keys: 1 Frostbolt, 3 Frost Armor, 4 Arcane Intellect, 5 Fire Blast, 6 Frost Nova,
-8/9 Conjure Food/Water, 0 Shoot, N1/N2 eat/drink.
+no adds are visible. Path: `23_Duskwood.json`.
+Keys: 1 Frostbolt, 2 Frost Nova, 3 Fire Blast, 4 Drink, 5 Food, 6 Shoot, N2 Ice Armor,
+N0 Conjure Water, N9 Conjure Food.
 
 Spellbook (try the first line; if it errors, use the second):
 ```
@@ -119,9 +152,9 @@ Bag item IDs:
 ## Open
 
 - [ ] Exe name: `Get-ChildItem "<client dir>" -Filter *.exe`, and its FileVersion (expected 1.60.x)
-- [ ] `/dump select(4, GetBuildInfo())` = 16001?
+- [ ] Paste the `DataToColor: Forever build ... missing globals: ...` line from chat
 - [ ] Which TOC loads (Notes check above)
 - [ ] `/dump BINDING_NAME_TARGETFOCUS, GetPetHappiness, GetInventorySlotInfo("AmmoSlot")`
 - [ ] Generate `Json/dbc/forever` (ReadDBC_CSV or CASC)
 - [ ] Geometry: hash-compare Forever ADTs vs 1.15 before trusting `precata`
-- [ ] Spell, buff-icon and conjured-item IDs for the Mage profile
+- [ ] Confirm armor buff icon IDs match `Storage.lua` (`!Ice Armor` check)
