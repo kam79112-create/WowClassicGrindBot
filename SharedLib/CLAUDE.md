@@ -29,8 +29,8 @@ Extensions/, Util/, Logging/
 
 ## Things that will bite you
 
-**`ClientVersion` has twelve values and `Legacy_*` are real clients.** `None`, `Retail`,
-`SoM`, `TBC`, `Wrath`, `Cata`, `Mop`, then `Legacy_Vanilla`/`_TBC`/`_Wrath`/`_Cata`/
+**`ClientVersion` has thirteen values and `Legacy_*` are real clients.** `None`, `Retail`,
+`SoM`, `TBC`, `Wrath`, `Cata`, `Mop`, `Forever` (18, WoW: Forever 1.60.x), then `Legacy_Vanilla`/`_TBC`/`_Wrath`/`_Cata`/
 `_Mop`. Any `switch` that lists only the modern ones silently sends every legacy client
 down the default branch — that is how `WApi` pointed legacy clients at the retail
 Wowhead site. Pair each modern value with its `Legacy_*` twin, or better, derive from

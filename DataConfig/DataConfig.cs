@@ -22,7 +22,7 @@ public sealed class DataConfig
     [JsonIgnore]
     public string Path => Join(Root, "path");
     [JsonIgnore]
-    public string ExpDbc => Join(Root, "dbc", Exp);
+    public string ExpDbc => Join(Root, "dbc", ContentExp(Exp));
     [JsonIgnore]
     public string PathInfo => Join(Root, "PathInfo");
     [JsonIgnore]
@@ -32,15 +32,15 @@ public sealed class DataConfig
     [JsonIgnore]
     public string Road => Join(Root, "road", ClientEra(Exp));
     [JsonIgnore]
-    public string ExpArea => Join(Root, "area", Exp);
+    public string ExpArea => Join(Root, "area", ContentExp(Exp));
     [JsonIgnore]
     public string PPather => Join(Root, "PPather");
     [JsonIgnore]
     public string Screenshot => Join(Root, "cap");
     [JsonIgnore]
-    public string ExpHistory => Join(Root, "History", Exp);
+    public string ExpHistory => Join(Root, "History", ContentExp(Exp));
     [JsonIgnore]
-    public string ExpExperience => Join(Root, "experience", Exp);
+    public string ExpExperience => Join(Root, "experience", ContentExp(Exp));
     [JsonIgnore]
     public string Leaflet => Join(Root, "leaflet", ClientEra(Exp));
     [JsonIgnore]
@@ -70,6 +70,9 @@ public sealed class DataConfig
             "vanilla" or "classic" or "som" or "tbc" or "bcc" or "wrath" or "wotlk"
                 or "legacy_vanilla" or "legacy_tbc" or "legacy_wrath" => "precata",
             "cata" or "legacy_cata" => "cata",
+            // WoW: Forever 1.60.1 - pre-Cataclysm world assumed; geometry NOT yet
+            // hash-compared against a 1.15 client. See PORT_NOTES.md.
+            "forever" => "precata",
             "mop" or "legacy_mop" => "mop",
             _ => client.ToLowerInvariant(),
         };
@@ -120,6 +123,18 @@ public sealed class DataConfig
         return era;
     }
 
+    /// <summary>
+    /// Which per-expansion data folder (dbc, area, experience, subzones, History,
+    /// npcspawnlocations, mailboxlocations) a client reads.
+    ///
+    /// INTERIM: WoW: Forever has no extracted data of its own yet, so it reads the
+    /// Classic Era ("som") set. Unverified - spell/item/creature IDs and XP tables
+    /// may differ in 1.60.1. Remove this arm once Json/*/forever is generated.
+    /// See PORT_NOTES.md.
+    /// </summary>
+    public static string ContentExp(string client) =>
+        client.Equals("forever", System.StringComparison.OrdinalIgnoreCase) ? "som" : client;
+
     /// <summary>Leaflet tile directory for one continent, honouring <see cref="TileEra"/>.</summary>
     public string LeafletFor(string continent) =>
         Join(Root, "leaflet", TileEra(Exp, continent), continent);
@@ -142,13 +157,13 @@ public sealed class DataConfig
         System.Array.IndexOf(LeafletEras, ClientEra(client)) >= 0;
 
     [JsonIgnore]
-    public string Subzones => Join(Root, "subzones", Exp);
+    public string Subzones => Join(Root, "subzones", ContentExp(Exp));
 
     [JsonIgnore]
-    public string NpcSpawnLocations => Join(Root, "npcspawnlocations", Exp);
+    public string NpcSpawnLocations => Join(Root, "npcspawnlocations", ContentExp(Exp));
 
     [JsonIgnore]
-    public string MailboxLocations => Join(Root, "mailboxlocations", Exp);
+    public string MailboxLocations => Join(Root, "mailboxlocations", ContentExp(Exp));
 
     [JsonIgnore]
     public string Mail => Join(Root, "mail");

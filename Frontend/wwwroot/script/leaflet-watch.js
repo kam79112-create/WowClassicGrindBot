@@ -213,6 +213,8 @@ function clientEra(expansion) {
         case 'vanilla': case 'classic': case 'som':
         case 'tbc': case 'bcc': case 'wrath': case 'wotlk':
         case 'legacy_vanilla': case 'legacy_tbc': case 'legacy_wrath':
+        // WoW: Forever 1.60.1 - pre-Cata world assumed, see PORT_NOTES.md
+        case 'forever':
             return 'precata';
         case 'cata': case 'legacy_cata':
             return 'cata';

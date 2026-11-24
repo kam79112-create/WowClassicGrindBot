@@ -12,6 +12,10 @@ public sealed class StartupClientVersion
     {
         (Version, Path) = v switch
         {
+            // --- WoW: Forever (1.60.x) ---
+            // Must precede the SoM arm: Minor 60 would otherwise match { Major: 1, Minor: >= 13 }.
+            { Major: 1, Minor: 60 } => (ClientVersion.Forever, "forever"),
+
             // --- Classic branch ---
             { Major: 1, Minor: >= 13 } => (ClientVersion.SoM, "som"), // Vanilla / SoM
             { Major: 2, Minor: >= 5 } => (ClientVersion.TBC, "tbc"),  // TBC Classic

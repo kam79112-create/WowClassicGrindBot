@@ -1,0 +1,165 @@
+{
+  "ClassName": "Mage",
+  "Loot": true,
+  "PathFilename": "",
+  "PathThereAndBack": true,
+  "PathReduceSteps": false,
+  "IntVariables": {
+    "Spell_Frostbolt": 0,
+    "Spell_FireBlast": 0,
+    "Spell_FrostNova": 0,
+    "Spell_FrostArmor": 0,
+    "Spell_ArcaneIntellect": 0,
+    "Spell_ConjureWater": 0,
+    "Spell_ConjureFood": 0,
+    "Buff_Frost Armor": 0,
+    "Buff_Arcane Intellect": 0,
+    "Item_Conjure_Drink": 0,
+    "Item_Conjure_Food": 0,
+    "MIN_FOOD%": 50,
+    "MIN_WATER%": 35,
+    "MIN_WATER": 6,
+    "MIN_FOOD": 6,
+    "MIN_MANA_SPELL%": 25
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Frostbolt",
+        "Key": "1",
+        "HasCastBar": true,
+        "Requirements": [
+          "Spell:Spell_Frostbolt",
+          "SpellInRange:3",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting",
+          "SpellInRange:1",
+          "Mana% <= MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!Casting",
+          "!Shooting"
+        ]
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Frost Nova",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirements": [
+          "Spell:Spell_FrostNova",
+          "InMeleeRange",
+          "!AddVisible"
+        ],
+        "AfterCastStepBack": 1000
+      },
+      {
+        "Name": "Fire Blast",
+        "Key": "5",
+        "WhenUsable": true,
+        "Requirements": [
+          "Spell:Spell_FireBlast",
+          "TargetHealth% < 25",
+          "SpellInRange:4"
+        ]
+      },
+      {
+        "Name": "Frostbolt",
+        "Key": "1",
+        "HasCastBar": true,
+        "Requirements": [
+          "Spell:Spell_Frostbolt",
+          "Mana% > MIN_MANA_SPELL%"
+        ]
+      },
+      {
+        "Name": "Shoot",
+        "Key": "0",
+        "Item": true,
+        "Requirements": [
+          "HasRangedWeapon",
+          "!Shooting"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!HasRangedWeapon",
+          "!AutoAttacking"
+        ]
+      }
+    ]
+  },
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "N1",
+        "Requirement": "Health% < MIN_FOOD%"
+      },
+      {
+        "Name": "Drink",
+        "Key": "N2",
+        "Requirement": "Mana% < MIN_WATER%"
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Frost Armor",
+        "Key": "3",
+        "Requirements": [
+          "Spell:Spell_FrostArmor",
+          "Buff_Frost Armor < 30000"
+        ],
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Arcane Intellect",
+        "Key": "4",
+        "Requirements": [
+          "Spell:Spell_ArcaneIntellect",
+          "Buff_Arcane Intellect < 60000"
+        ],
+        "AfterCastWaitBuff": true
+      },
+      {
+        "Name": "Conjure Water",
+        "HasCastBar": true,
+        "Key": "9",
+        "Requirements": [
+          "Spell:Spell_ConjureWater",
+          "!BagItem:Item_Conjure_Drink:MIN_WATER"
+        ],
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
+      },
+      {
+        "Name": "Conjure Food",
+        "HasCastBar": true,
+        "Key": "8",
+        "Requirements": [
+          "Spell:Spell_ConjureFood",
+          "!BagItem:Item_Conjure_Food:MIN_FOOD"
+        ],
+        "AfterCastWaitCastbar": true,
+        "AfterCastWaitBag": true
+      }
+    ]
+  }
+}

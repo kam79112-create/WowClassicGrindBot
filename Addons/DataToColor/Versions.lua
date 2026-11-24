@@ -50,6 +50,13 @@ function DataToColor.IsClassic_Cata()
   return WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
 end
 
+-- WoW: Forever (1.60.1). WOW_PROJECT_ID measured as 18 in-client; the client
+-- defines no WOW_PROJECT_* constant for it, hence the literal.
+local WOW_PROJECT_FOREVER = 18
+function DataToColor.IsForever()
+  return WOW_PROJECT_ID == WOW_PROJECT_FOREVER
+end
+
 function DataToColor.IsRetail()
   return WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
 end
